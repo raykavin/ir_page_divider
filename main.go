@@ -40,8 +40,8 @@ const (
 )
 
 var (
-	rootDir    = flag.String("p", ".", "O caminho dos arquivos PDF")
-	maxWorkers = flag.Int("w", 5, "O número máximo de workers para processar os PDFs")
+	rootDir    = flag.String("d", ".", "The PDF files path")
+	maxWorkers = flag.Int("w", 5, "The maximum number of workers to process PDFs")
 	w          = wow.New(os.Stdout, spin.Get(spin.Dots), "")
 	mu         sync.Mutex
 )
@@ -53,41 +53,44 @@ func main() {
 	var wg sync.WaitGroup
 	workerPool := make(chan struct{}, *maxWorkers)
 
-	// Configura o Tesseract OCR.
+	// Configure o Tesseract OCR.
 	tesseractClient := configureTesseract()
 
-	// Cria diretórios necessários.
+	// Make directories.
 	makeDirectories()
 
-	// Canal para coletar informações das páginas.
-	collectPageInfoChannel := make(chan *CollectPageInfo, 1)
+	// Channel to collect information from pages.
+	collectPageInfoC := make(chan *CollectPageInfo, 1)
 
-	// Canal para sinalizar o término da coleta.
+	// Channel to signal the end of the collection.
 	done := make(chan struct{})
 
-	// Busca arquivos PDF.
+	// Search PDF files in "rootDir" flag
 	pdfFiles := searchPdfFiles()
 	if len(pdfFiles) == 0 {
-		fmt.Printf("Nenhum arquivo PDF encontrado no caminho: %s\n", *rootDir)
+		fmt.Printf("No PDF files found on path: %s\n", *rootDir)
 	}
 
-	// Goroutine que processa os grupos coletados.
+	// Goroutine that processes the collected groups.
 	go func() {
-		for collectedPageInfo := range collectPageInfoChannel {
+		for collectedPageInfo := range collectPageInfoC {
 			collectPdfPages(collectedPageInfo)
 		}
+
+		// After "collectPageInfoC" is closed and the synchronous
+		// operation of the function "collectPdfPages" is no longer running
 		done <- struct{}{}
 	}()
 
-	// Processa cada PDF em uma goroutine.
+	// Process each PDF in a goroutine.
 	for _, pdfFile := range pdfFiles {
 		wg.Add(1)
 		workerPool <- struct{}{}
-		go pdfProcess(pdfFile, tesseractClient, collectPageInfoChannel, workerPool, &wg)
+		go pdfProcess(pdfFile, tesseractClient, collectPageInfoC, workerPool, &wg)
 	}
 
 	wg.Wait()
-	close(collectPageInfoChannel)
+	close(collectPageInfoC)
 	<-done
 
 	tesseractClient.Close()
@@ -115,7 +118,7 @@ func searchPdfFiles() []string {
 	var pdfFiles []string
 	err := filepath.Walk(*rootDir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
-			log.Printf("Erro ao acessar o arquivo %s: %v", path, err)
+			log.Printf("Error acessing file %s: %v", path, err)
 			return nil
 		}
 		if filepath.Ext(path) == pdfExt {
@@ -124,22 +127,22 @@ func searchPdfFiles() []string {
 		return nil
 	})
 	if err != nil {
-		log.Fatalf("Erro ao buscar arquivos PDF: %v", err)
+		log.Fatalf("Error searching PDF files: %v", err)
 	}
 	return pdfFiles
 }
 
-func pdfProcess(file string, tesseractClient *gosseract.Client, collectPageInfoChannel chan<- *CollectPageInfo, workerPoolSignal chan struct{}, wg *sync.WaitGroup) {
+func pdfProcess(file string, tesseractClient *gosseract.Client, collectPageInfoC chan<- *CollectPageInfo, workerPoolC chan struct{}, wg *sync.WaitGroup) {
 	defer func() {
-		<-workerPoolSignal
+		<-workerPoolC
 		wg.Done()
 	}()
 
-	// Inicializa o grupo atual com o arquivo.
+	// Initialize the current group with the file.
 	currentGroup := &CollectPageInfo{File: file}
 	pdf, err := fitz.New(file)
 	if err != nil {
-		log.Printf("Erro ao abrir o arquivo PDF %s: %v", file, err)
+		log.Printf("Error opening PDF file %s: %v", file, err)
 		return
 	}
 	defer pdf.Close()
@@ -147,10 +150,10 @@ func pdfProcess(file string, tesseractClient *gosseract.Client, collectPageInfoC
 	pdfTotalPages := pdf.NumPage()
 
 	for pageNumber := 0; pageNumber < pdfTotalPages; pageNumber++ {
-		// Extrai a imagem da página.
+		// Extract the image from the page.
 		img, err := pdf.Image(pageNumber)
 		if err != nil {
-			log.Printf("Erro ao ler a página %d do arquivo %s: %v", pageNumber+1, file, err)
+			log.Printf("Error reading page %d of file %s: %v", pageNumber+1, file, err)
 			continue
 		}
 
@@ -161,41 +164,44 @@ func pdfProcess(file string, tesseractClient *gosseract.Client, collectPageInfoC
 
 		content, err := ocrReadFromFile(path, tesseractClient)
 		if err != nil || content == nil {
-			log.Printf("Conteúdo inválido ou erro na leitura OCR do arquivo %s", path)
+			log.Printf("Invalid content or error reading OCR file %s", path)
 			continue
 		}
 
-		// Extrai as informações usando regex.
+		// Extract the information using regex.
 		contentPattern := findContent(*content)
-		companyName, collaborator := extractCompanyAndCollaborator(contentPattern)
 
-		// Se não encontrou colaborador na página, usa o colaborador anterior (se existir).
+		company := extractField(contentPattern, 2, 0)
+		collaborator := extractField(contentPattern, 2, 1)
+
+		// If no collaborator was found on the page, use the previous collaborator (if any).
 		if collaborator == "" && currentGroup.Key != "" {
 			collaborator = currentGroup.Key
 		}
 
-		// Se a chave já estiver definida e a atual for diferente, envia o grupo atual e reinicia a acumulação.
+		// If the key is already set and the current one is different, send the current group and restart the accumulation.
 		if currentGroup.Key != "" && collaborator != currentGroup.Key {
-			collectPageInfoChannel <- currentGroup
+			collectPageInfoC <- currentGroup
 			currentGroup = &CollectPageInfo{File: file}
 		}
 
-		if companyName != "" {
-			currentGroup.SubPath = companyName
+		if company != "" {
+			currentGroup.SubPath = company
 		}
-		// Atualiza a chave somente se o colaborador estiver definido.
+
+		// Update the key only if the collaborator is defined.
 		if collaborator != "" {
 			currentGroup.Key = collaborator
 		}
 
 		currentGroup.Pages = append(currentGroup.Pages, fmt.Sprint(pageNumber+1))
 
-		w.Text(term.Bluef("Aguarde, processando o arquivo: %s... %d/%d página(s)", file, pageNumber+1, pdfTotalPages))
+		w.Text(term.Bluef(" Please wait, processing file: %s... %d/%d page(s)", file, pageNumber+1, pdfTotalPages))
 		w.Start()
 	}
 
-	// Envia o último grupo, garantindo que a última página seja processada.
-	collectPageInfoChannel <- currentGroup
+	// Send the last group, ensuring that the last page is processed.
+	collectPageInfoC <- currentGroup
 }
 
 func saveImageAsPng(img image.Image, file string, pageNumber int) (string, error) {
@@ -204,39 +210,27 @@ func saveImageAsPng(img image.Image, file string, pageNumber int) (string, error
 
 	fStream, err := os.Create(path)
 	if err != nil {
-		log.Printf("Erro ao criar o arquivo PNG temporário %s: %v", path, err)
+		log.Printf("Error creating temporary PNG file %s: %v", path, err)
 		return "", err
 	}
 	defer fStream.Close()
 
 	if err := png.Encode(fStream, img); err != nil {
-		log.Printf("Erro ao codificar a página %d para PNG no arquivo %s: %v", pageNumber+1, file, err)
+		log.Printf("Error encoding page %d to PNG in file %s: %v", pageNumber+1, file, err)
 		return "", err
 	}
 	return path, nil
 }
 
-func extractCompanyAndCollaborator(contentPattern []string) (string, string) {
-	companyName := ""
-	collaborator := ""
-
-	if len(contentPattern) >= 2 {
-		companyParts := strings.SplitN(contentPattern[0], " ", 2)
-		if len(companyParts) >= 2 {
-			companyName = companyParts[1]
-		} else {
-			companyName = strings.Split(contentPattern[0], " ")[0]
+func extractField(contentPattern []string, length, index int) string {
+	if index < len(contentPattern) {
+		parts := strings.SplitN(contentPattern[index], " ", 2)
+		if len(parts) >= length {
+			return parts[1]
 		}
-
-		employeeParts := strings.SplitN(contentPattern[1], " ", 2)
-		if len(employeeParts) >= 2 {
-			collaborator = employeeParts[1]
-		} else {
-			collaborator = strings.Split(contentPattern[1], " ")[0]
-		}
+		return parts[0]
 	}
-
-	return companyName, collaborator
+	return ""
 }
 
 func collectPdfPages(collectPageInfo *CollectPageInfo) {
@@ -250,7 +244,7 @@ func collectPdfPages(collectPageInfo *CollectPageInfo) {
 	}
 
 	if err := api.CollectFile(inFile, outFile, pageOffset, api.LoadConfiguration()); err != nil {
-		fmt.Printf("Erro ao processar o arquivo: %s para: %s", inFile, fileName)
+		fmt.Printf("Error processing file: %s for: %s", inFile, fileName)
 	}
 }
 

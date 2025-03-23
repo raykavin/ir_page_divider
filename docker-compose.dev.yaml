@@ -1,0 +1,13 @@
+services:
+  development:
+    image: mcr.microsoft.com/devcontainers/go:1-1.23-bookworm
+    container_name: irpf_processor_dev
+    working_dir: /go/src/irpf_processor
+    environment:
+      TZ: America/Belem
+    volumes:
+      - ./:/go/src/irpf_processor
+      - ./.docker/go/bin:/go/bin
+      - ./.docker/go/pkg:/go/pkg
+    tty: true
+    restart: on-failure

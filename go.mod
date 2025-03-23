@@ -1,6 +1,6 @@
-module irpf_page_divider
+module irpf_page_split
 
-go 1.24.1
+go 1.23.7
 
 require (
 	github.com/gernest/wow v0.1.0
