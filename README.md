@@ -23,7 +23,7 @@ To run this project, make sure you have installed:
 1. Clone this repository:
 
    ```sh
-   git clone https://github.com/seu-usuario/divisor-pdf.git
+   git clone https://github.com/raykavin/ir_page_divider.git
    cd divisor-pdf
    ```
 
@@ -38,7 +38,7 @@ To run this project, make sure you have installed:
 Run the program with the following parameters:
 
 ```sh
-go run main.go -p <caminho_dos_pdfs> -w <numero_de_workers>
+go run main.go -p <pdf_files> -w <workers_number>
 ```
 
 ### Parameters:
