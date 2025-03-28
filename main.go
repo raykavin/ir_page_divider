@@ -22,12 +22,12 @@ import (
 	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
-// CollectPageInfo agrupa as informações de páginas extraídas do PDF.
+// CollectPageInfo groups page information extracted from the PDF.
 type CollectPageInfo struct {
-	Pages   []string // Páginas coletadas.
-	File    string   // Caminho do arquivo PDF.
-	Key     string   // Chave única (ex: colaborador) para identificar o grupo.
-	SubPath string   // Subdiretório para o conteúdo processado (ex: nome da empresa)
+	Pages   []string // Collected pages.
+	File    string   // PDF file path.
+	Key     string   // Unique key (e.g. collaborator) to identify the group.
+	SubPath string   // Subdirectory for processed content (e.g. company name)
 }
 
 const (
