@@ -1,83 +1,82 @@
-# Divisor de Páginas de Arquivos PDF
+# PDF income statement page divider
 
-## Descrição
+## Description
 
-Este aplicativo permite dividir arquivos PDF de informes de rendimentos, organizando automaticamente os documentos extraídos em pastas nomeadas conforme a empresa e salvando cada arquivo com o nome do respectivo colaborador. O processo inclui a extração de imagens das páginas, reconhecimento de texto via OCR e a segmentação baseada nas informações extraídas.
+This application allows you to split PDF files of income reports, automatically organizing the extracted documents into folders named according to the company and saving each file with the name of the respective employee. The process includes extracting images from the pages, recognizing text via OCR and segmenting based on the extracted information.
 
-## Funcionalidades
+## Features
 
-- Processamento automatizado de arquivos PDF.
-- Utiliza OCR (Reconhecimento Óptico de Caracteres) para extrair informações das páginas.
-- Identifica e organiza arquivos por empresa e colaborador.
-- Processamento paralelo para maior eficiência.
+- Automated processing of PDF files.
+- Uses OCR (Optical Character Recognition) to extract information from pages.
+- Identifies and organizes files by company and employee.
+- Parallel processing for greater efficiency.
 
-## Requisitos
+## Requirements
 
-Para executar este projeto, certifique-se de ter instalado:
+To run this project, make sure you have installed:
 
-- [Go](https://golang.org/doc/install) (versão 1.18 ou superior)
+- [Go](https://golang.org/doc/install) (version 1.18 or higher)
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract)
 
-## Instalação
+## Installation
 
-1. Clone este repositório:
+1. Clone this repository:
 
    ```sh
    git clone https://github.com/seu-usuario/divisor-pdf.git
    cd divisor-pdf
    ```
 
-2. Instale as dependências:
+2. Install the dependencies:
 
    ```sh
    go mod tidy
    ```
 
-## Uso
+## Usage
 
-Execute o programa com os seguintes parâmetros:
+Run the program with the following parameters:
 
 ```sh
 go run main.go -p <caminho_dos_pdfs> -w <numero_de_workers>
 ```
 
-### Parâmetros:
-- `-p`: Diretório onde estão localizados os arquivos PDF (padrão: diretório atual `.`).
-- `-w`: Número de workers em paralelo para processamento (padrão: 5).
+### Parameters:
+- `-p`: Directory where the PDF files are located (default: current directory `.`).
+- `-w`: Number of workers in parallel for processing (default: 5).
 
-Exemplo de execução:
+Example execution:
 ```sh
-go run main.go -p ./documentos -w 10
+go run main.go -p ./documents -w 10
 ```
 
-## Estrutura do Projeto
+## Project Structure
 
 ```
 /
-├── main.go          # Arquivo principal do aplicativo
-├── go.mod           # Dependências do projeto
-├── tmp/             # Diretório temporário para processamento de imagens
-├── processed/       # Saída dos arquivos organizados por empresa e colaborador
+├── main.go          # Main application file
+├── go.mod           # Project dependencies
+├── tmp/             # Temporary directory for image processing
+├── processed/       # Output of files organized by company
 ```
 
-## Dependências Principais
+## Main Dependencies
 
-- [go-fitz](https://github.com/karmdip-mi/go-fitz) - Extração de imagens de PDFs
-- [gosseract](https://github.com/otiai10/gosseract) - Wrapper para Tesseract OCR
-- [pdfcpu](https://github.com/pdfcpu/pdfcpu) - Manipulação de arquivos PDF
-- [wow](https://github.com/gernest/wow) - Animações para terminal
+- [go-fitz](https://github.com/karmdip-mi/go-fitz) - PDF image extraction
+- [gosseract](https://github.com/otiai10/gosseract) - Wrapper for Tesseract OCR
+- [pdfcpu](https://github.com/pdfcpu/pdfcpu) - PDF file manipulation
+- [wow](https://github.com/gernest/wow) - Terminal animations
 
-## Contribuição
+## Contribution
 
-Sinta-se à vontade para contribuir com melhorias para este projeto. Para isso:
+Feel free to contribute improvements to this project. To do so:
 
-1. Fork o repositório
-2. Crie uma branch para sua feature: `git checkout -b minha-feature`
-3. Commit suas mudanças: `git commit -m 'Adiciona nova funcionalidade'`
-4. Push para a branch: `git push origin minha-feature`
-5. Envie um Pull Request
+1. Fork the repository
+2. Create a branch for your feature: `git checkout -b my-feature`
+3. Commit your changes: `git commit -m 'Adds new feature'`
+4. Push to the branch: `git push origin my-feature`
+5. Submit a Pull Request
 
-## Licença
+## License
 
-Este projeto está licenciado sob a MIT License - veja o arquivo [LICENSE](LICENSE) para mais detalhes.
-
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for more details.
